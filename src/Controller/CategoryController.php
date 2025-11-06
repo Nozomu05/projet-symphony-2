@@ -12,7 +12,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 
-#[Route('/category')]
+#[Route('/api/category')]
 class CategoryController extends AbstractController
 {
     #[Route('/create', name: 'create_category', methods: ['POST'])]
@@ -21,6 +21,8 @@ class CategoryController extends AbstractController
         EntityManagerInterface $entityManager
     ): JsonResponse
     {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
         $content = json_decode($request->getContent(), true);
 
         $category = new Category();

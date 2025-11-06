@@ -14,7 +14,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Psr\Log\LoggerInterface;
 
-#[Route('/product')]
+#[Route('/api/product')]
 class ProductController extends AbstractController
 {
     #[Route('/create', name: 'create_product', methods: ['POST'])]

@@ -10,9 +10,7 @@ use Psr\Log\LoggerInterface;
 
 class LuckyController extends AbstractController
 {
-    #[Route('/lucky/number', 
-        name: 'random_number'
-    )]
+    #[Route('/api/lucky/number', name: 'random_number')]
     public function number(): Response
     {
         $number = random_int(0, 100);

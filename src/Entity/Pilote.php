@@ -41,9 +41,13 @@ class Pilote
     #[ORM\OneToMany(targetEntity: RegistreFractions::class, mappedBy: 'pilote')]
     private Collection $registre_infractions;
 
+    #[ORM\Column(length: 50, options: ['default' => 'actif'])]
+    private ?string $status = 'actif';
+
     public function __construct()
     {
         $this->registre_infractions = new ArrayCollection();
+        $this->status = 'actif';
     }
 
     public function getId(): ?int
@@ -149,6 +153,18 @@ class Pilote
                 $registreInfraction->setPilote(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getStatus(): ?string
+    {
+        return $this->status;
+    }
+
+    public function setStatus(string $status): static
+    {
+        $this->status = $status;
 
         return $this;
     }

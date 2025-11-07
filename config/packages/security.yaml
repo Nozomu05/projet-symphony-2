@@ -9,27 +9,29 @@ security:
             entity:
                 class: App\Entity\User
                 property: email
+        # used to reload user from session & other features (e.g. switch_user)
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
-        main:
-            #lazy: true
-            #provider: app_user_provider
+        
+        login:
             pattern: ^/api/login
             stateless: true
+            provider: app_user_provider
             json_login:
                 check_path: /api/login
                 success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
 
-        api_register:
-            pattern:   ^/api/user/create
-            stateless: false
+        register:
+            pattern: ^/api/register
+            stateless: true
 
         api:
-            pattern:   ^/api
+            pattern: ^/api
             stateless: true
+            provider: app_user_provider
             jwt: ~
 
             # activate different ways to authenticate
@@ -41,10 +43,11 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-        - { path: ^/api/user/create, roles: PUBLIC_ACCESS, methods: POST }
-        - { path: ^/api/login, roles: PUBLIC_ACCESS , methods : POST}
-        - { path: '^/api/category/create', roles: [ROLE_ADMIN], methods: POST }
-        - { path: ^/api,       roles: [IS_AUTHENTICATED_FULLY] }
+        - { path: ^/api/register, roles: PUBLIC_ACCESS, methods: POST }
+        - { path: ^/api/login, roles: PUBLIC_ACCESS, methods: POST }
+        - { path: ^/api/infraction, roles: ROLE_ADMIN, methods: POST }
+        - { path: ^/api/ecurie/.*/pilotes, roles: ROLE_ADMIN, methods: [POST, PUT, PATCH, DELETE] }
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
         # - { path: '^/category/create', roles: [IS_AUTHENTICATED_FULLY, ROLE_USER], methods: POST }
         # - { path: '^/product/create', roles: [PUBLIC_ACCESS], methods: POST }
         # - { path: ^/api/login, roles: [PUBLIC_ACCESS] }
@@ -52,8 +55,7 @@ security:
         # - { path: ^/profile, roles: ROLE_USER }
 
     role_hierarchy:
-        ROLE_ADMIN: [ROLE_MANAGER, ROLE_USER]
-        ROLE_MANAGER: [ROLE_USER]
+        ROLE_ADMIN: [ROLE_USER]
 
 when@test:
     security:

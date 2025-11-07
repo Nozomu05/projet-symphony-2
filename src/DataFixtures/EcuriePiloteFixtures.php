@@ -11,7 +11,6 @@ class EcuriePiloteFixtures extends Fixture
 {
     public function load(ObjectManager $manager): void
     {
-        // Création des écuries
         $ecuries = [
             [
                 'nom' => 'Red Bull Racing',
@@ -52,14 +51,12 @@ class EcuriePiloteFixtures extends Fixture
         ];
 
         foreach ($ecuries as $ecurieData) {
-            // Créer l'écurie
             $ecurie = new Ecurie();
             $ecurie->setNom($ecurieData['nom']);
             $ecurie->setMoteur($ecurieData['moteur']);
             
             $manager->persist($ecurie);
 
-            // Créer les pilotes pour cette écurie
             foreach ($ecurieData['pilotes'] as $piloteData) {
                 $pilote = new Pilote();
                 $pilote->setPrenom($piloteData['prenom']);

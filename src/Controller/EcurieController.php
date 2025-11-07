@@ -22,10 +22,7 @@ class EcurieController extends AbstractController
         private PiloteRepository $piloteRepository
     ) {}
 
-    /**
-     * Récupère une écurie avec ses pilotes
-     */
-    #[Route('/{id}', name: 'ecurie_show', methods: ['GET'])]
+    #[Route('/{id}', name: 'ecurie_show', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function show(int $id): JsonResponse
     {
         $ecurie = $this->ecurieRepository->find($id);
@@ -54,12 +51,11 @@ class EcurieController extends AbstractController
         ]);
     }
 
-    /**
-     * Modifie les pilotes d'une écurie
-     */
-    #[Route('/{id}/pilotes', name: 'ecurie_update_pilotes', methods: ['PUT', 'PATCH'])]
+    #[Route('/{id}/pilotes', name: 'ecurie_update_pilotes', methods: ['PUT', 'PATCH'], requirements: ['id' => '\d+'])]
     public function updatePilotes(int $id, Request $request): JsonResponse
     {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        
         $ecurie = $this->ecurieRepository->find($id);
         
         if (!$ecurie) {
@@ -73,16 +69,13 @@ class EcurieController extends AbstractController
         }
 
         try {
-            // Traiter chaque pilote dans la requête
             foreach ($data['pilotes'] as $piloteData) {
                 if (isset($piloteData['id'])) {
-                    // Modifier un pilote existant
                     $pilote = $this->piloteRepository->find($piloteData['id']);
                     if ($pilote && $pilote->getEcurie()->getId() === $ecurie->getId()) {
                         $this->updatePiloteData($pilote, $piloteData);
                     }
                 } else {
-                    // Créer un nouveau pilote
                     $pilote = new Pilote();
                     $pilote->setEcurie($ecurie);
                     $this->updatePiloteData($pilote, $piloteData);
@@ -105,12 +98,11 @@ class EcurieController extends AbstractController
         }
     }
 
-    /**
-     * Ajoute un nouveau pilote à une écurie
-     */
-    #[Route('/{id}/pilotes/add', name: 'ecurie_add_pilote', methods: ['POST'])]
+    #[Route('/{id}/pilotes/add', name: 'ecurie_add_pilote', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function addPilote(int $id, Request $request): JsonResponse
     {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        
         $ecurie = $this->ecurieRepository->find($id);
         
         if (!$ecurie) {
@@ -147,12 +139,11 @@ class EcurieController extends AbstractController
         }
     }
 
-    /**
-     * Supprime un pilote d'une écurie
-     */
-    #[Route('/{ecurieId}/pilotes/{piloteId}', name: 'ecurie_remove_pilote', methods: ['DELETE'])]
+    #[Route('/{ecurieId}/pilotes/{piloteId}', name: 'ecurie_remove_pilote', methods: ['DELETE'], requirements: ['ecurieId' => '\d+', 'piloteId' => '\d+'])]
     public function removePilote(int $ecurieId, int $piloteId): JsonResponse
     {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        
         $ecurie = $this->ecurieRepository->find($ecurieId);
         $pilote = $this->piloteRepository->find($piloteId);
         
@@ -184,9 +175,6 @@ class EcurieController extends AbstractController
         }
     }
 
-    /**
-     * Liste toutes les écuries avec leurs pilotes
-     */
     #[Route('', name: 'ecurie_list', methods: ['GET'])]
     public function list(): JsonResponse
     {
@@ -216,9 +204,6 @@ class EcurieController extends AbstractController
         return $this->json($result);
     }
 
-    /**
-     * Méthode helper pour mettre à jour les données d'un pilote
-     */
     private function updatePiloteData(Pilote $pilote, array $data): void
     {
         if (isset($data['prenom'])) {

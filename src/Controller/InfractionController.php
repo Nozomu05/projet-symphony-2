@@ -23,12 +23,11 @@ class InfractionController extends AbstractController
         private PiloteRepository $piloteRepository
     ) {}
 
-    /**
-     * Infliger une amende/pénalité à une écurie
-     */
-    #[Route('/ecurie/{id}', name: 'infraction_ecurie', methods: ['POST'])]
+    #[Route('/ecurie/{id}', name: 'infraction_ecurie', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function infligerInfractionEcurie(int $id, Request $request): JsonResponse
     {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        
         $ecurie = $this->ecurieRepository->find($id);
         
         if (!$ecurie) {
@@ -37,7 +36,14 @@ class InfractionController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
         
-        // Validation des données requises
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return $this->json(['error' => 'JSON invalide: ' . json_last_error_msg()], Response::HTTP_BAD_REQUEST);
+        }
+        
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Les données doivent être au format JSON objet'], Response::HTTP_BAD_REQUEST);
+        }
+        
         $requiredFields = ['nom_de_la_course', 'description', 'date'];
         foreach ($requiredFields as $field) {
             if (!isset($data[$field])) {
@@ -45,7 +51,6 @@ class InfractionController extends AbstractController
             }
         }
 
-        // Vérifier qu'au moins une pénalité ou une amende est spécifiée
         if (!isset($data['penalite']) && !isset($data['amende'])) {
             return $this->json([
                 'error' => 'Au moins une pénalité (points) ou une amende (montant) doit être spécifiée'
@@ -59,12 +64,10 @@ class InfractionController extends AbstractController
             $infraction->setDescription($data['description']);
             $infraction->setDate(new \DateTime($data['date']));
             
-            // Pénalité (points) - optionnelle
             if (isset($data['penalite']) && $data['penalite'] !== null) {
                 $infraction->setPenalite((int)$data['penalite']);
             }
             
-            // Amende (montant) - optionnelle
             if (isset($data['amende']) && $data['amende'] !== null) {
                 $infraction->setAmende((string)$data['amende']);
             }
@@ -88,12 +91,11 @@ class InfractionController extends AbstractController
         }
     }
 
-    /**
-     * Infliger une amende/pénalité à un pilote
-     */
-    #[Route('/pilote/{id}', name: 'infraction_pilote', methods: ['POST'])]
+    #[Route('/pilote/{id}', name: 'infraction_pilote', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function infligerInfractionPilote(int $id, Request $request): JsonResponse
     {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        
         $pilote = $this->piloteRepository->find($id);
         
         if (!$pilote) {
@@ -102,7 +104,6 @@ class InfractionController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
         
-        // Validation des données requises
         $requiredFields = ['nom_de_la_course', 'description', 'date'];
         foreach ($requiredFields as $field) {
             if (!isset($data[$field])) {
@@ -110,7 +111,6 @@ class InfractionController extends AbstractController
             }
         }
 
-        // Vérifier qu'au moins une pénalité ou une amende est spécifiée
         if (!isset($data['penalite']) && !isset($data['amende'])) {
             return $this->json([
                 'error' => 'Au moins une pénalité (points) ou une amende (montant) doit être spécifiée'
@@ -120,17 +120,15 @@ class InfractionController extends AbstractController
         try {
             $infraction = new RegistreFractions();
             $infraction->setPilote($pilote);
-            $infraction->setEcurie($pilote->getEcurie()); // Associer aussi l'écurie du pilote
+            $infraction->setEcurie($pilote->getEcurie());
             $infraction->setNomDeLaCourse($data['nom_de_la_course']);
             $infraction->setDescription($data['description']);
             $infraction->setDate(new \DateTime($data['date']));
             
-            // Pénalité (points) - optionnelle
             if (isset($data['penalite']) && $data['penalite'] !== null) {
                 $infraction->setPenalite((int)$data['penalite']);
             }
             
-            // Amende (montant) - optionnelle
             if (isset($data['amende']) && $data['amende'] !== null) {
                 $infraction->setAmende((string)$data['amende']);
             }
@@ -155,10 +153,7 @@ class InfractionController extends AbstractController
         }
     }
 
-    /**
-     * Infliger une amende/pénalité (route générale avec type)
-     */
-    #[Route('/{type}/{id}', name: 'infraction_generale', methods: ['POST'], requirements: ['type' => 'ecurie|pilote'])]
+    #[Route('/{type}/{id}', name: 'infraction_generale', methods: ['POST'], requirements: ['type' => 'ecurie|pilote', 'id' => '\d+'])]
     public function infligerInfraction(string $type, int $id, Request $request): JsonResponse
     {
         if ($type === 'ecurie') {
@@ -170,18 +165,6 @@ class InfractionController extends AbstractController
         return $this->json(['error' => 'Type invalide. Utilisez "ecurie" ou "pilote"'], Response::HTTP_BAD_REQUEST);
     }
 
-    /**
-     * Lister toutes les infractions avec filtres
-     * 
-     * Filtres disponibles :
-     * - ecurie_id : ID de l'écurie
-     * - pilote_id : ID du pilote
-     * - date_debut : Date de début (YYYY-MM-DD)
-     * - date_fin : Date de fin (YYYY-MM-DD)
-     * - date : Date exacte (YYYY-MM-DD)
-     * - course : Nom de la course (recherche partielle)
-     * - type : 'amende', 'penalite', 'mixte' (selon le type de sanction)
-     */
     #[Route('', name: 'infraction_list', methods: ['GET'])]
     public function listerInfractions(Request $request): JsonResponse
     {
@@ -190,21 +173,18 @@ class InfractionController extends AbstractController
             ->leftJoin('i.pilote', 'p')
             ->orderBy('i.date', 'DESC');
 
-        // Filtre par écurie
         if ($request->query->get('ecurie_id')) {
             $ecurieId = (int)$request->query->get('ecurie_id');
             $queryBuilder->andWhere('e.id = :ecurieId')
                         ->setParameter('ecurieId', $ecurieId);
         }
 
-        // Filtre par pilote
         if ($request->query->get('pilote_id')) {
             $piloteId = (int)$request->query->get('pilote_id');
             $queryBuilder->andWhere('p.id = :piloteId')
                         ->setParameter('piloteId', $piloteId);
         }
 
-        // Filtre par date exacte
         if ($request->query->get('date')) {
             try {
                 $date = new \DateTime($request->query->get('date'));
@@ -215,7 +195,6 @@ class InfractionController extends AbstractController
             }
         }
 
-        // Filtre par période (date_debut et date_fin)
         if ($request->query->get('date_debut')) {
             try {
                 $dateDebut = new \DateTime($request->query->get('date_debut'));
@@ -229,7 +208,7 @@ class InfractionController extends AbstractController
         if ($request->query->get('date_fin')) {
             try {
                 $dateFin = new \DateTime($request->query->get('date_fin'));
-                $dateFin->setTime(23, 59, 59); // Inclure toute la journée
+                $dateFin->setTime(23, 59, 59);
                 $queryBuilder->andWhere('i.date <= :dateFin')
                             ->setParameter('dateFin', $dateFin);
             } catch (\Exception $e) {
@@ -237,14 +216,12 @@ class InfractionController extends AbstractController
             }
         }
 
-        // Filtre par nom de course (recherche partielle)
         if ($request->query->get('course')) {
             $course = $request->query->get('course');
             $queryBuilder->andWhere('i.nomDeLaCourse LIKE :course')
                         ->setParameter('course', '%' . $course . '%');
         }
 
-        // Filtre par type de sanction
         if ($request->query->get('type')) {
             $type = $request->query->get('type');
             switch ($type) {
@@ -262,16 +239,13 @@ class InfractionController extends AbstractController
             }
         }
 
-        // Pagination optionnelle
         $page = max(1, (int)$request->query->get('page', 1));
-        $limit = min(100, max(1, (int)$request->query->get('limit', 20))); // Max 100 par page
+        $limit = min(100, max(1, (int)$request->query->get('limit', 20)));
         $offset = ($page - 1) * $limit;
 
-        // Compter le total pour la pagination
         $totalQueryBuilder = clone $queryBuilder;
         $total = $totalQueryBuilder->select('COUNT(i.id)')->getQuery()->getSingleScalarResult();
 
-        // Appliquer la pagination
         $infractions = $queryBuilder->setFirstResult($offset)
                                   ->setMaxResults($limit)
                                   ->getQuery()
@@ -318,10 +292,7 @@ class InfractionController extends AbstractController
         ]);
     }
 
-    /**
-     * Lister les infractions d'une écurie
-     */
-    #[Route('/ecurie/{id}/historique', name: 'infraction_ecurie_historique', methods: ['GET'])]
+    #[Route('/ecurie/{id}/historique', name: 'infraction_ecurie_historique', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function historiqueInfractionsEcurie(int $id): JsonResponse
     {
         $ecurie = $this->ecurieRepository->find($id);
@@ -357,10 +328,7 @@ class InfractionController extends AbstractController
         ]);
     }
 
-    /**
-     * Lister les infractions d'un pilote
-     */
-    #[Route('/pilote/{id}/historique', name: 'infraction_pilote_historique', methods: ['GET'])]
+    #[Route('/pilote/{id}/historique', name: 'infraction_pilote_historique', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function historiqueInfractionsPilote(int $id): JsonResponse
     {
         $pilote = $this->piloteRepository->find($id);
@@ -393,15 +361,11 @@ class InfractionController extends AbstractController
         ]);
     }
 
-    /**
-     * Obtenir les statistiques et filtres disponibles
-     */
     #[Route('/stats', name: 'infraction_stats', methods: ['GET'])]
     public function getStatistiques(): JsonResponse
     {
         $infractions = $this->entityManager->getRepository(RegistreFractions::class)->findAll();
         
-        // Statistiques générales
         $totalInfractions = count($infractions);
         $totalAmendes = 0;
         $totalPenalites = 0;
@@ -409,14 +373,12 @@ class InfractionController extends AbstractController
         $infractionsAvecPenalite = 0;
         $infractionsAmendeEtPenalite = 0;
         
-        // Filtres disponibles
         $ecuries = [];
         $pilotes = [];
         $courses = [];
         $annees = [];
         
         foreach ($infractions as $infraction) {
-            // Statistiques
             if ($infraction->getAmende()) {
                 $totalAmendes += (float)$infraction->getAmende();
                 $infractionsAvecAmende++;
@@ -429,7 +391,6 @@ class InfractionController extends AbstractController
                 $infractionsAmendeEtPenalite++;
             }
             
-            // Écuries disponibles
             $ecurie = $infraction->getEcurie();
             if ($ecurie && !isset($ecuries[$ecurie->getId()])) {
                 $ecuries[$ecurie->getId()] = [
@@ -438,7 +399,6 @@ class InfractionController extends AbstractController
                 ];
             }
             
-            // Pilotes disponibles
             $pilote = $infraction->getPilote();
             if ($pilote && !isset($pilotes[$pilote->getId()])) {
                 $pilotes[$pilote->getId()] = [
@@ -448,13 +408,11 @@ class InfractionController extends AbstractController
                 ];
             }
             
-            // Courses disponibles
             $course = $infraction->getNomDeLaCourse();
             if ($course && !in_array($course, $courses)) {
                 $courses[] = $course;
             }
             
-            // Années disponibles
             $annee = $infraction->getDate()->format('Y');
             if (!in_array($annee, $annees)) {
                 $annees[] = $annee;

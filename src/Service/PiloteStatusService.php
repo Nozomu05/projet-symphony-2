@@ -46,14 +46,4 @@ class PiloteStatusService
         }
     }
 
-    public function ajouterPoints(Pilote $pilote, int $points): void
-    {
-        $nouveauxPoints = $pilote->getPointsLicense() + $points;
-        $pilote->setPointsLicense($nouveauxPoints);
-        
-        $this->updatePiloteStatus($pilote);
-        
-        $this->entityManager->persist($pilote);
-        $this->entityManager->flush();
-    }
 }

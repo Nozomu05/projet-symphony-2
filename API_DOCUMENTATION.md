@@ -171,9 +171,29 @@ curl -X DELETE http://localhost:8000/api/ecurie/1/pilotes/3
 - **URL**: `POST /api/infraction/{type}/{id}`
 - **Description**: Route générale où type = "ecurie" ou "pilote"
 
-### 4. **Lister toutes les infractions**
+### 4. **Lister toutes les infractions avec filtres**
 - **URL**: `GET /api/infraction`
-- **Description**: Récupère toutes les infractions enregistrées
+- **Description**: Récupère toutes les infractions avec filtres avancés
+
+**Filtres disponibles** :
+- `ecurie_id` : ID de l'écurie (ex: `?ecurie_id=1`)
+- `pilote_id` : ID du pilote (ex: `?pilote_id=1`) 
+- `date` : Date exacte (ex: `?date=2024-05-26`)
+- `date_debut` : Date de début (ex: `?date_debut=2024-01-01`)
+- `date_fin` : Date de fin (ex: `?date_fin=2024-12-31`)
+- `course` : Nom de course (recherche partielle) (ex: `?course=Monaco`)
+- `type` : Type de sanction - `amende`, `penalite`, `mixte` (ex: `?type=amende`)
+- `page` : Numéro de page (ex: `?page=2`)
+- `limit` : Nombre par page (max 100) (ex: `?limit=50`)
+
+**Exemples d'URL** :
+```
+GET /api/infraction?ecurie_id=1
+GET /api/infraction?pilote_id=1&type=penalite
+GET /api/infraction?date_debut=2024-01-01&date_fin=2024-12-31
+GET /api/infraction?course=Monaco&type=amende
+GET /api/infraction?ecurie_id=1&date=2024-05-26&page=1&limit=10
+```
 
 ### 5. **Historique des infractions d'une écurie**
 - **URL**: `GET /api/infraction/ecurie/{id}/historique`
@@ -182,6 +202,18 @@ curl -X DELETE http://localhost:8000/api/ecurie/1/pilotes/3
 ### 6. **Historique des infractions d'un pilote**
 - **URL**: `GET /api/infraction/pilote/{id}/historique`
 - **Description**: Récupère l'historique des infractions d'un pilote
+
+### 7. **Statistiques et filtres disponibles**
+- **URL**: `GET /api/infraction/stats`
+- **Description**: Récupère les statistiques globales et les filtres disponibles
+
+**Réponse inclut** :
+- Statistiques générales (total infractions, amendes, pénalités)
+- Liste des écuries disponibles pour filtrage
+- Liste des pilotes disponibles pour filtrage  
+- Liste des courses disponibles
+- Années disponibles
+- Exemples d'utilisation des filtres
 
 ## Exemples d'utilisation avec curl
 
@@ -225,6 +257,33 @@ curl -X POST http://localhost:8000/api/infraction/pilote/2 \
 ### Voir l'historique des infractions de Ferrari (id=3) :
 ```bash
 curl -X GET http://localhost:8000/api/infraction/ecurie/3/historique
+```
+
+### Exemples avec les nouveaux filtres :
+
+### Lister toutes les infractions de Red Bull :
+```bash
+curl -X GET "http://localhost:8000/api/infraction?ecurie_id=1"
+```
+
+### Infractions de Max Verstappen avec pénalités seulement :
+```bash
+curl -X GET "http://localhost:8000/api/infraction?pilote_id=1&type=penalite"
+```
+
+### Infractions du Grand Prix de Monaco 2024 :
+```bash
+curl -X GET "http://localhost:8000/api/infraction?course=Monaco&date_debut=2024-05-01&date_fin=2024-05-31"
+```
+
+### Toutes les amendes de l'année 2024 (page 1, 10 résultats) :
+```bash
+curl -X GET "http://localhost:8000/api/infraction?type=amende&date_debut=2024-01-01&date_fin=2024-12-31&page=1&limit=10"
+```
+
+### Obtenir les statistiques et filtres disponibles :
+```bash
+curl -X GET http://localhost:8000/api/infraction/stats
 ```
 
 ## Champs requis
